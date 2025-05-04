@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Autism Risk Detection System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f6fc;
+            color: #333;
+        }
+
+        header {
+            background-color: #4CAF50;
+            padding: 20px 10px;
+            text-align: center;
+            color: white;
+        }
+
+        .container {
+            padding: 30px 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .intro {
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+
+        .btn-group {
+            margin: 20px 0;
+        }
+
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            margin: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #388e3c;
+        }
+
+        .section-title {
+            font-size: 24px;
+            margin-top: 40px;
+            color: #222;
+        }
+
+        .how-it-works {
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 10px 0 30px 0;
+            color: #555;
+        }
+
+        .flash {
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .flash-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .flash-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 14px;
+            padding: 20px;
+            color: #777;
+            background-color: #e9ecef;
+        }
+
+        @media (max-width: 600px) {
+            .btn {
+                width: 80%;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Smart Autism Risk Detection System</h1>
+    </header>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <p class="intro">
+            This system helps detect autism risk by analyzing facial images and quiz answers. You may use either method or both for a more accurate result.
+        </p>
+
+        <div class="btn-group">
+            <a href="{{ url_for('upload_page') }}" class="btn" role="button">Upload Image</a>
+            <a href="{{ url_for('quiz') }}" class="btn" role="button">Take the Quiz</a>
+            <a href="{{ url_for('result') }}" class="btn" role="button">View Result</a>
+        </div>
+
+        <h2 class="section-title">How It Works</h2>
+        <p class="how-it-works">
+            <strong>Image Detection:</strong> Upload a clear frontal facial photo. Our deep learning model analyzes the features for autism risk.<br>
+            <strong>Quiz Assessment:</strong> Answer 7 questions about behavioral patterns. The system evaluates your score.<br>
+            <strong>Combined Result:</strong> If both are completed, we give a combined risk evaluation based on image and quiz scores.
+        </p>
+    </div>
+
+    <footer>
+        &copy; 2025 Smart Autism Risk Detection System | Powered by AI & Deep Learning
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Image - Autism Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f2f6fc;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 20px;
+        }
+
+        form {
+            background: #ffffff;
+            max-width: 500px;
+            margin: 30px auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-size: 16px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #388e3c;
+        }
+
+        .message {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 600px) {
+            form {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Upload a Face Image for Autism Prediction</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="message {{ category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('upload_image') }}" enctype="multipart/form-data">
+        <label for="image">Choose an image:</label>
+        <input type="file" name="image" id="image" accept="image/*" required>
+
+        <input type="submit" value="Upload and Predict">
+    </form>
+
+</body>
+</html>

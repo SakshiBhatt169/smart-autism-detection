@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Goodbye - Autism Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background-color: #fefefe;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #444;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #4CAF50;
+            font-size: 36px;
+        }
+
+        p {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        a {
+            text-decoration: none;
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        a:hover {
+            background-color: #388e3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Thank You!</h1>
+    <p>You have exited the Autism Detection System.</p>
+    <a href="{{ url_for('index') }}">Return to Home</a>
+</body>
+</html>
