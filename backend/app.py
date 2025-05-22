@@ -1,35 +1,47 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
-import tensorflow as tf
-from keras.models import load_model
-import numpy as np
 import cv2
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.colors import black, HexColor
-from reportlab.lib.units import inch
-from io import BytesIO
+import numpy as np
+from keras.models import load_model
 from datetime import datetime
-
+from io import BytesIO
+import gdown
+import mysql.connector
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.colors import black, HexColor
+from functools import wraps
+model_path = "autism_detection_model.h5"
+if not os.path.exists(model_path):
+    print("Downloading model from Google Drive...")
+    url = "https://drive.google.com/uc?id=1s5OimbbO_ZRaRgUSTyETKdBeWK4tPeVU"
+    gdown.download(url, model_path, quiet=False)
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# Configuration
+# File Upload Config
 UPLOAD_FOLDER = 'backend/uploads/'
 HEATMAP_FOLDER = 'backend/heatmaps/'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(HEATMAP_FOLDER, exist_ok=True)
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['HEATMAP_FOLDER'] = HEATMAP_FOLDER
 
-# Load the trained model
+# Load trained model
 model = load_model('model/autism_detection_model.h5')
 
-# Quiz questions
+# MySQL Configuration
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="root123",
+    database="smart_autism_db"
+)
+cursor = db.cursor()
+
+# Quiz Questions
 quiz_questions = [
     "Does your child show difficulties with social interactions?",
     "Does your child avoid eye contact?",
@@ -40,13 +52,18 @@ quiz_questions = [
     "Does your child demonstrate repetitive movements?"
 ]
 
-# Helpers
+# Helper Functions
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def index():
@@ -55,20 +72,55 @@ def index():
     both_done = image_uploaded and quiz_attempted
     return render_template('index.html', both_done=both_done)
 
-@app.route('/exit')
-def exit_app():
-    session.clear()
-    return redirect(url_for('goodbye'))
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = generate_password_hash(request.form['password'])
 
-@app.route('/goodbye')
-def goodbye():
-    return render_template('goodbye.html')
+        try:
+            cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)",
+                           (username, email, password))
+            db.commit()
+            flash('Registration successful. Please log in.', 'success')
+            return redirect(url_for('login'))
+        except mysql.connector.IntegrityError:
+            flash('Username already exists.', 'danger')
+
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        cursor.execute("SELECT id, password_hash FROM users WHERE username = %s", (username,))
+        user = cursor.fetchone()
+
+        if user and check_password_hash(user[1], password):
+            session['user_id'] = user[0]
+            session['username'] = username
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid credentials.', 'danger')
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('login'))
 
 @app.route('/upload')
+@login_required
 def upload_page():
     return render_template('upload.html')
 
 @app.route('/upload_image', methods=['POST'])
+@login_required
 def upload_image():
     image = request.files.get('image')
 
@@ -81,7 +133,6 @@ def upload_image():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image.save(filepath)
 
-        # Preprocess the image for prediction
         img = cv2.imread(filepath)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = cv2.resize(img, (224, 224))
@@ -92,13 +143,14 @@ def upload_image():
         session['image_result'] = float(prediction)
         session['image_uploaded'] = True
 
-        flash('Image uploaded and processed successfully! Please complete the quiz.', 'success')
+        flash('Image processed successfully!', 'success')
         return redirect(url_for('index'))
     else:
         flash('Invalid image format.', 'danger')
         return redirect(url_for('upload_page'))
 
 @app.route('/quiz', methods=['GET', 'POST'])
+@login_required
 def quiz():
     if request.method == 'POST':
         answers = [request.form.get(f'q{i}') for i in range(1, 8)]
@@ -111,12 +163,13 @@ def quiz():
         session['quiz_attempted'] = True
         session['quiz_answers'] = answers
 
-        flash('Quiz submitted successfully! Please upload an image if not already done.', 'success')
+        flash('Quiz submitted successfully!', 'success')
         return redirect(url_for('index'))
 
     return render_template('quiz.html', questions=quiz_questions)
 
 @app.route('/result')
+@login_required
 def result():
     image_uploaded = session.get('image_uploaded', False)
     quiz_attempted = session.get('quiz_attempted', False)
@@ -127,27 +180,27 @@ def result():
     guidance_message = "Please complete both the quiz and image upload to view results."
 
     if image_uploaded and 'image_result' in session:
-        image_score = session['image_result']
-        if image_score >= 0.7:
+        score = session['image_result']
+        if score >= 0.7:
             image_display = 'High Risk'
-        elif image_score >= 0.4:
+        elif score >= 0.4:
             image_display = 'Moderate Risk'
         else:
             image_display = 'Low Risk'
 
     if quiz_attempted and 'quiz_result' in session:
-        quiz_score = session['quiz_result']
-        if quiz_score >= 0.7:
+        score = session['quiz_result']
+        if score >= 0.7:
             quiz_display = 'High Risk'
-        elif quiz_score >= 0.4:
+        elif score >= 0.4:
             quiz_display = 'Moderate Risk'
         else:
             quiz_display = 'Low Risk'
 
     if image_display != "Not Attempted" or quiz_display != "Not Attempted":
-        risk_levels = {'Not Attempted': 0, 'Low Risk': 1, 'Moderate Risk': 2, 'High Risk': 3}
-        combined_score = max(risk_levels[image_display], risk_levels[quiz_display])
-        combined_result = [k for k, v in risk_levels.items() if v == combined_score][0]
+        risk_map = {'Not Attempted': 0, 'Low Risk': 1, 'Moderate Risk': 2, 'High Risk': 3}
+        combined = max(risk_map[image_display], risk_map[quiz_display])
+        combined_result = [k for k, v in risk_map.items() if v == combined][0]
         session['combined_result'] = combined_result
 
         if combined_result == 'Low Risk':
@@ -157,23 +210,21 @@ def result():
         elif combined_result == 'High Risk':
             guidance_message = "High risk indicators detected. Please consult a healthcare professional."
 
-    return render_template(
-        'result.html',
-        image_result=image_display,
-        quiz_result=quiz_display,
-        combined_result=combined_result,
-        risk_level=combined_result,
-        guidance_message=guidance_message
-    )
+    return render_template('result.html',
+                           image_result=image_display,
+                           quiz_result=quiz_display,
+                           combined_result=combined_result,
+                           guidance_message=guidance_message)
 
 @app.route('/download_pdf')
+@login_required
 def download_pdf():
     image_score = session.get('image_result', 'Not Available')
     quiz_score = session.get('quiz_result', 'Not Available')
     combined_result = session.get('combined_result', 'Not Available')
     answers = session.get('quiz_answers', [])
 
-    def get_risk_label(score):
+    def get_label(score):
         if isinstance(score, (float, int)):
             if score >= 0.7:
                 return 'High Risk'
@@ -183,23 +234,20 @@ def download_pdf():
                 return 'Low Risk'
         return 'Not Available'
 
-    image_risk = get_risk_label(image_score)
-    quiz_risk = get_risk_label(quiz_score)
+    image_risk = get_label(image_score)
+    quiz_risk = get_label(quiz_score)
 
-    pdf_buffer = BytesIO()
-    c = canvas.Canvas(pdf_buffer, pagesize=letter)
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    # Title
     c.setFont("Helvetica-Bold", 20)
     c.setFillColor(HexColor("#003366"))
     c.drawCentredString(width / 2, height - 50, "Autism Detection Report")
 
-    # Border
     c.setStrokeColor(black)
     c.rect(50, 100, width - 100, height - 150, stroke=1)
 
-    # Report Content
     c.setFont("Helvetica", 12)
     c.setFillColor(black)
     y = height - 90
@@ -208,22 +256,16 @@ def download_pdf():
     y -= 30
     c.setFont("Helvetica-Bold", 13)
     c.drawString(70, y, "Image Prediction:")
-
+    y -= 20
     c.setFont("Helvetica", 12)
-    y -= 20
-    c.drawString(90, y, f"Image Result Score: {image_score}")
-    y -= 20
-    c.drawString(90, y, f"Risk Level: {image_risk}")
+    c.drawString(90, y, f"Score: {image_score}  |  Risk Level: {image_risk}")
 
     y -= 30
     c.setFont("Helvetica-Bold", 13)
     c.drawString(70, y, "Quiz Result:")
-
+    y -= 20
     c.setFont("Helvetica", 12)
-    y -= 20
-    c.drawString(90, y, f"Quiz Result Score: {quiz_score}")
-    y -= 20
-    c.drawString(90, y, f"Risk Level: {quiz_risk}")
+    c.drawString(90, y, f"Score: {quiz_score}  |  Risk Level: {quiz_risk}")
 
     y -= 30
     c.setFont("Helvetica-Bold", 13)
@@ -233,12 +275,10 @@ def download_pdf():
         y -= 40
         c.setFont("Helvetica-Bold", 13)
         c.drawString(70, y, "Quiz Answers:")
-
         c.setFont("Helvetica", 11)
         y -= 20
-        for i, answer in enumerate(answers):
-            question = quiz_questions[i]
-            c.drawString(90, y, f"Q{i+1}: {question} Answer: {answer}")
+        for i, ans in enumerate(answers):
+            c.drawString(90, y, f"Q{i+1}: {quiz_questions[i]} → {ans}")
             y -= 18
             if y < 120:
                 c.showPage()
@@ -246,8 +286,17 @@ def download_pdf():
                 c.setFont("Helvetica", 11)
 
     c.save()
-    pdf_buffer.seek(0)
-    return send_file(pdf_buffer, as_attachment=True, download_name="autism_detection_report.pdf", mimetype="application/pdf")
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="autism_report.pdf", mimetype="application/pdf")
+
+@app.route('/exit')
+def exit_app():
+    session.clear()
+    return redirect(url_for('goodbye'))
+
+@app.route('/goodbye')
+def goodbye():
+    return render_template('goodbye.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
