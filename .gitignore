@@ -1,0 +1,23 @@
+# Ignore the large model file
+backend/model/autism_detection_model.h5
+
+# Ignore model heatmaps (optional)
+backend/heatmaps/
+
+# Ignore uploaded images (optional)
+backend/uploads/
+
+# Python cache and environment files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+
+# VSCode settings (if you use VSCode)
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
