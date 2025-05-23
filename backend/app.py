@@ -13,11 +13,13 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import black, HexColor
 from functools import wraps
+
 model_path = "autism_detection_model.h5"
 if not os.path.exists(model_path):
     print("Downloading model from Google Drive...")
     url = "https://drive.google.com/uc?id=1s5OimbbO_ZRaRgUSTyETKdBeWK4tPeVU"
     gdown.download(url, model_path, quiet=False)
+
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
@@ -287,16 +289,4 @@ def download_pdf():
 
     c.save()
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="autism_report.pdf", mimetype="application/pdf")
-
-@app.route('/exit')
-def exit_app():
-    session.clear()
-    return redirect(url_for('goodbye'))
-
-@app.route('/goodbye')
-def goodbye():
-    return render_template('goodbye.html')
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    return send_file(buffer, as_attachment=True, download_name="autism_report.pdf", mimetype='application/pdf')
