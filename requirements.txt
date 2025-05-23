@@ -99,3 +99,4 @@ WTForms==3.2.1
 xhtml2pdf==0.2.17
 gdown
 gunicorn==21.2.0
+mysql-connector-python
