@@ -14,7 +14,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import black, HexColor
 from functools import wraps
 
-model_path = "model/autism_detection_model.h5"
+model_path = "autism_detection_model.h5"
 if not os.path.exists(model_path):
     print("Downloading model from Google Drive...")
     url = "https://drive.google.com/uc?id=1s5OimbbO_ZRaRgUSTyETKdBeWK4tPeVU"
