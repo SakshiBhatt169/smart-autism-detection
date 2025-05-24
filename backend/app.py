@@ -19,7 +19,7 @@ MODEL_PATH = os.path.join(MODEL_DIR, 'autism_detection_model.h5')
 
 # Google Drive file ID for your model file
 # (extract from your shareable link)
-GDRIVE_FILE_ID = 'your-google-drive-file-id-here'
+GDRIVE_FILE_ID = '1s5OimbbO_ZRaRgUSTyETKdBeWK4tPeVU'
 
 def download_model():
     if not os.path.exists(MODEL_DIR):
