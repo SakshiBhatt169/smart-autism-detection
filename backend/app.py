@@ -14,11 +14,26 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import black, HexColor
 from functools import wraps
 
-model_path = "autism_detection_model.h5"
-if not os.path.exists(model_path):
-    print("Downloading model from Google Drive...")
-    url = "https://drive.google.com/uc?id=1s5OimbbO_ZRaRgUSTyETKdBeWK4tPeVU"
-    gdown.download(url, model_path, quiet=False)
+MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model')
+MODEL_PATH = os.path.join(MODEL_DIR, 'autism_detection_model.h5')
+
+# Google Drive file ID for your model file
+# (extract from your shareable link)
+GDRIVE_FILE_ID = 'your-google-drive-file-id-here'
+
+def download_model():
+    if not os.path.exists(MODEL_DIR):
+        os.makedirs(MODEL_DIR)
+    if not os.path.exists(MODEL_PATH):
+        print("Downloading model from Google Drive...")
+        url = f'https://drive.google.com/uc?id={GDRIVE_FILE_ID}'
+        gdown.download(url, MODEL_PATH, quiet=False)
+    else:
+        print("Model file already exists, skipping download.")
+
+# At app startup:
+download_model()
+model = load_model(MODEL_PATH)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
